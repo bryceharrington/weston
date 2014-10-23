@@ -4558,6 +4558,14 @@ usage(int error_code)
        "\n");
 #endif
 
+#if defined(BUILD_HEADLESS_COMPOSITOR)
+	fprintf(stderr,
+		"Options for headless-backend.so:\n\n"
+		"  --width=WIDTH\t\tWidth of Wayland surface\n"
+		"  --height=HEIGHT\tHeight of Wayland surface\n"
+		"  --use-pixman\t\tUse the pixman (CPU) renderer\n\n");
+#endif
+
 	exit(error_code);
 }
 
