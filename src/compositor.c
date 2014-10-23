@@ -4556,6 +4556,16 @@ usage(int error_code)
        "\n");
 #endif
 
+#if defined(BUILD_HEADLESS_COMPOSITOR)
+	fprintf(stderr,
+		"Options for headless-backend.so:\n\n"
+		"  --width=WIDTH\t\tWidth of Wayland surface\n"
+		"  --height=HEIGHT\tHeight of Wayland surface\n"
+		"  --transform=TR\tThe output transformation, TR is one of:\n"
+		"\tnormal 90 180 270 flipped flipped-90 flipped-180 flipped-270\n"
+		"  --use-pixman\t\tUse the pixman (CPU) renderer\n\n");
+#endif
+
 	exit(error_code);
 }
 
