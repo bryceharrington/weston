@@ -77,8 +77,13 @@ dump_image(int x, int y, uint32_t *image_buf)
 	uint32_t *wut;
 	FILE *temp;
 	char *filename;
+	int ret;
 
-	asprintf(&filename, "outfile%d.ppm", frameno++);
+	ret = asprintf(&filename, "outfile%d.ppm", frameno++);
+	if (ret < 0) {
+		weston_log("Could not create image output filename.\n");
+		return;
+	}
 	temp = fopen(filename, "wb");
 
 	fprintf(temp, "P3\n%d %d\n255\n", x, y);
@@ -91,6 +96,8 @@ dump_image(int x, int y, uint32_t *image_buf)
 		fprintf(temp, "\n");
 	}
 	fclose(temp);
+
+	weston_log("Wrote %s\n", filename);
 }
 
 static int
