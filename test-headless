@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+TESTNAME=foobar
+
+WESTON=./weston
+LOGDIR="."
+SERVERLOG="$LOGDIR/$TESTNAME-server.log"
+OUTLOG="$LOGDIR/$TESTNAME.log"
+TESTLOG="$LOGDIR/$TESTNAME.log"
+
+BACKEND=headless-backend.so
+
+echo "Starting weston"
+$WESTON --backend=$BACKEND \
+        --no-config \
+        --use-pixman \
+        --log="$SERVERLOG" \
+        &> "$OUTLOG" &
+WESTON_PID=$(pidof $WESTON)
+
+echo "Executing test case"
+sleep 4
+echo "ok" > $TESTLOG
+
+echo "Testing complete"
+kill $WESTON_PID
+
+echo "Results:"
+echo "  server log:      $SERVERLOG"
+echo "  server output:   $OUTLOG"
+echo "  test log:        $TESTLOG"
