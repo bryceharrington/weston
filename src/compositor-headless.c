@@ -81,6 +81,7 @@ dump_image(int x, int y, uint32_t *image_buf)
 
 	ret = asprintf(&filename, "outfile%d.ppm", frameno++);
 	if (ret < 0) {
+		filename = NULL;
 		weston_log("Could not create image output filename.\n");
 		return;
 	}
@@ -98,6 +99,7 @@ dump_image(int x, int y, uint32_t *image_buf)
 	fclose(temp);
 
 	weston_log("Wrote %s\n", filename);
+	free(filename);
 }
 
 static int
