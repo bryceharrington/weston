@@ -4630,6 +4630,14 @@ weston_transform_to_string(uint32_t output_transform)
 	return "<illegal value>";
 }
 
+WL_EXPORT void
+weston_compositor_screenshot(struct weston_compositor *ec, const char *filename)
+{
+	if (ec->record_screenshot) {
+		weston_log("Recording file: %s\n", filename);
+		ec->record_screenshot(ec, filename);
+	}
+}
 
 int main(int argc, char *argv[])
 {

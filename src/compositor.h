@@ -651,6 +651,8 @@ struct weston_compositor {
 
 	void (*destroy)(struct weston_compositor *ec);
 	void (*restore)(struct weston_compositor *ec);
+	void (*record_screenshot)(struct weston_compositor *ec,
+				  const char *filename);
 	int (*authenticate)(struct weston_compositor *c, uint32_t id);
 
 	struct weston_launcher *launcher;
@@ -1468,6 +1470,10 @@ weston_load_module(const char *name, const char *entrypoint);
 
 int
 weston_parse_transform(const char *transform, uint32_t *out);
+
+void
+weston_compositor_screenshot(struct weston_compositor *ec,
+			     const char *filename);
 
 const char *
 weston_transform_to_string(uint32_t output_transform);
