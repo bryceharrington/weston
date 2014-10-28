@@ -69,6 +69,27 @@ finish_frame_handler(void *data)
 	return 1;
 }
 
+static void
+dump_image(const char *filename, int x, int y, uint32_t *image_buf)
+{
+	int i,  j;
+	uint32_t *wut;
+	FILE *temp;
+
+	temp = fopen(filename, "wb");
+
+	fprintf(temp, "P3\n%d %d\n255\n", x, y);
+
+	for (i = 0; i < y; i++) {
+		for (j = 0; j < x; j++) {
+			wut = image_buf + j + x * i;
+			fprintf(temp, "%d %d %d  ", (*wut >> 16) & 0xFF, (*wut >> 8) & 0xFF, *wut & 0xFF);
+		}
+		fprintf(temp, "\n");
+	}
+	fclose(temp);
+}
+
 static int
 headless_output_repaint(struct weston_output *output_base,
 		       pixman_region32_t *damage)
@@ -193,6 +214,35 @@ headless_destroy(struct weston_compositor *ec)
 	free(ec);
 }
 
+static void
+record_screenshot(struct weston_compositor *ec, const char *filename)
+{
+	struct headless_compositor *c = (struct headless_compositor *) ec;
+	struct weston_output *o, *next;
+	int w, h;
+
+	if (!c->use_pixman)
+		return;
+
+	wl_list_for_each_safe(o, next, &ec->output_list, link) {
+		struct headless_output *output = (struct headless_output *)o;
+		switch (o->transform) {
+		case WL_OUTPUT_TRANSFORM_90:
+		case WL_OUTPUT_TRANSFORM_270:
+		case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+		case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+			w = o->height;
+			h = o->width;
+			break;
+		default:
+			w = o->width;
+			h = o->height;
+			break;
+		}
+		dump_image(filename, w, h, output->image_buf);
+	}
+}
+
 static struct weston_compositor *
 headless_compositor_create(struct wl_display *display,
 			   struct headless_parameters *param,
@@ -217,6 +267,7 @@ headless_compositor_create(struct wl_display *display,
 
 	c->base.destroy = headless_destroy;
 	c->base.restore = headless_restore;
+	c->base.record_screenshot = record_screenshot;
 
 	c->use_pixman = param->use_pixman;
 	if (c->use_pixman) {
