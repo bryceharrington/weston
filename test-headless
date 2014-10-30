@@ -12,17 +12,22 @@ TESTLOG="$LOGDIR/$TESTNAME.log"
 
 BACKEND=headless-backend.so
 
+# Test timeout of the screensaver
+TIMEOUT=1
+
 echo "Starting weston"
+echo "Starting weston" > $SERVERLOG
 $WESTON --backend=$BACKEND \
         --no-config \
         --use-pixman \
+        --idle-time=$TIMEOUT \
         --log="$SERVERLOG" \
         &> "$OUTLOG" &
 WESTON_PID=$(pidof $WESTON)
 
-echo "Executing test case"
+echo "Test screensaver timeout"
 sleep 4
-echo "ok" > $TESTLOG
+echo "ok" >> $TESTLOG
 
 echo "Testing complete"
 kill $WESTON_PID
