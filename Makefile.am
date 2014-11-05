@@ -852,7 +852,8 @@ weston_tests =					\
 	text.weston				\
 	presentation.weston			\
 	roles.weston				\
-	subsurface.weston
+	subsurface.weston			\
+	fadein.weston
 
 
 AM_TESTS_ENVIRONMENT = \
@@ -953,6 +954,10 @@ text_weston_LDADD = libtest-client.la
 subsurface_weston_SOURCES = tests/subsurface-test.c
 subsurface_weston_CFLAGS = $(AM_CFLAGS) $(TEST_CLIENT_CFLAGS)
 subsurface_weston_LDADD = libtest-client.la
+
+fadein_weston_SOURCES = tests/fadein-test.c
+fadein_weston_CFLAGS = $(AM_CFLAGS) $(TEST_CLIENT_CFLAGS)
+fadein_weston_LDADD = libtest-client.la
 
 presentation_weston_SOURCES = tests/presentation-test.c
 nodist_presentation_weston_SOURCES =		\
