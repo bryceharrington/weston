@@ -848,6 +848,7 @@ weston_tests =					\
 	bad_buffer.weston			\
 	keyboard.weston				\
 	event.weston				\
+	fadein.weston				\
 	headless.weston				\
 	button.weston				\
 	text.weston				\
@@ -939,6 +940,10 @@ keyboard_weston_LDADD = libtest-client.la
 event_weston_SOURCES = tests/event-test.c
 event_weston_CFLAGS = $(AM_CFLAGS) $(TEST_CLIENT_CFLAGS)
 event_weston_LDADD = libtest-client.la
+
+fadein_weston_SOURCES = tests/fadein-test.c
+fadein_weston_CFLAGS = $(AM_CFLAGS) $(TEST_CLIENT_CFLAGS)
+fadein_weston_LDADD = libtest-client.la
 
 headless_weston_SOURCES = tests/headless-test.c
 headless_weston_CFLAGS = $(AM_CFLAGS) $(TEST_CLIENT_CFLAGS)
