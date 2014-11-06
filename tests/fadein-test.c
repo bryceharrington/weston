@@ -20,27 +20,106 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "config.h"
+
 #include <unistd.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "weston-test-client-helper.h"
 
 char *server_parameters="--use-pixman";
 
+static char*
+output_filename(const char* basename) {
+	static const char *path = "./";
+	static const char *ext = "ppm";
+	char *filename;
+
+        if (asprintf(&filename, "%s%s.%s", path, basename, ext) < 0)
+		filename = NULL;
+
+	return filename;
+}
+
+static char*
+reference_filename(const char* basename) {
+	static const char *path = "./tests/reference/";
+	static const char *ext = "ppm";
+	char *filename;
+
+        if (asprintf(&filename, "%s%s.%s", path, basename, ext) < 0)
+		filename = NULL;
+
+	return filename;
+}
+
+static bool
+files_equal(const char *test_filename, const char* ref_filename)
+{
+	FILE *test, *ref;
+	int t, p;
+
+	if (test_filename == NULL || ref_filename == NULL)
+		return false;
+
+	test = fopen (test_filename, "rb");
+	if (test == NULL)
+		return false;
+
+	ref = fopen (ref_filename, "rb");
+	if (ref == NULL) {
+		fclose (test);
+		return false;
+	}
+
+	do {
+		t = getc (test);
+		p = getc (ref);
+		if (t != p)
+			break;
+	} while (t != EOF && p != EOF);
+
+	fclose (test);
+	fclose (ref);
+
+	return t == p;  /* both EOF */
+}
+
 TEST(headless)
 {
 	struct client *client;
-	char filename[32];
+	char basename[32];
+	char *out_path;
+	char *ref_path;
 	int i;
 
 	client = client_create(100, 100, 100, 100);
 	assert(client);
 
 	for (i=0; i<=12; i++) {
-		snprintf(filename, sizeof filename, "fadein-%02d.ppm", i);
-		wl_test_record_screenshot(client->test->wl_test, filename);
+		snprintf(basename, sizeof basename, "fadein-%02d", i);
+		out_path = output_filename(basename);
+		ref_path = reference_filename(basename);
+
+		wl_test_record_screenshot(client->test->wl_test, out_path);
 		client_roundtrip(client);
+		if (i == 0) {
+			/* FIXME:  The clock will of course differ from
+			 * when the reference images were generated, which
+			 * will count as a failure since the files won't
+			 * be identical.  So for now, only look at the
+			 * very first frame, which will be black.
+			 *
+			 * Ultimately we should mask out the clock or set
+			 * it to a fixed time, so the comparison works.
+			 */
+			assert(files_equal(out_path, ref_path));
+		}
+
 		sleep(.25);
 	}
 
+	free (out_path);
+	free (ref_path);
 }
