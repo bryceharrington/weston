@@ -24,27 +24,73 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "weston-test-client-helper.h"
 
 char *server_parameters="--use-pixman --width=320 --height=240";
 
 static char*
-output_filename(const char* basename) {
+output_filename(const char* basename, int head) {
 	static const char *path = "./";
 	char *filename;
 
-        if (asprintf(&filename, "%s%s", path, basename) < 0)
+        if (asprintf(&filename, "%s%s-%d.png", path, basename, head) < 0)
 		filename = NULL;
 
 	return filename;
 }
+
+static char*
+reference_filename(const char* basename, int head) {
+        static const char *path = "./tests/reference/";
+        char *filename;
+
+        if (asprintf(&filename, "%s%s-%d.png", path, basename, head) < 0)
+                filename = NULL;
+
+        return filename;
+}
+
+static bool
+files_equal(const char *test_filename, const char* ref_filename)
+{
+        FILE *test, *ref;
+        int t, p;
+
+        if (test_filename == NULL || ref_filename == NULL)
+                return false;
+
+        test = fopen (test_filename, "rb");
+        if (test == NULL)
+                return false;
+
+        ref = fopen (ref_filename, "rb");
+        if (ref == NULL) {
+                fclose (test);
+                return false;
+        }
+
+        do {
+                t = getc (test);
+                p = getc (ref);
+                if (t != p)
+                        break;
+        } while (t != EOF && p != EOF);
+
+        fclose (test);
+        fclose (ref);
+
+        return t == p;  /* both EOF */
+}
+
 
 TEST(headless)
 {
 	struct client *client;
 	char basename[32];
 	char *out_path;
+	char *ref_path;
 	int i;
 
 	client = client_create(100, 100, 100, 100);
@@ -52,11 +98,21 @@ TEST(headless)
 
 	for (i = 0; i < 6; i++) {
 		snprintf(basename, sizeof basename, "fadein-%02d", i);
-		out_path = output_filename(basename);
+		// FIXME: Iterate over all heads
+		out_path = output_filename(basename, 0);
+		ref_path = reference_filename(basename, 0);
 
-		wl_test_record_screenshot(client->test->wl_test, out_path);
+		// FIXME: Would be preferred to pass in out_path rather than basename here...
+		wl_test_record_screenshot(client->test->wl_test, basename);
 		client_roundtrip(client);
+		if (i == 0) {
+			if (files_equal(out_path, ref_path))
+				printf("%s is correct\n", out_path);
+			else
+				printf("%s doesn't match reference %s\n", out_path, ref_path);
+		}
 		free (out_path);
+		free (ref_path);
 
 		usleep(250000);
 	}
