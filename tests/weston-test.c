@@ -238,7 +238,9 @@ get_n_buffers(struct wl_client *client, struct wl_resource *resource)
 }
 
 static void
-dump_image(const char *filename, int x, int y, uint32_t *image)
+dump_image(const char *filename, int x, int y, uint32_t *image,
+	   unsigned int clip_x, unsigned int clip_y,
+	   unsigned int clip_width, unsigned int clip_height)
 {
 	cairo_surface_t *surface, *flipped;
 	cairo_t *cr;
@@ -249,10 +251,25 @@ dump_image(const char *filename, int x, int y, uint32_t *image)
 	flipped = cairo_surface_create_similar_image(surface, CAIRO_FORMAT_ARGB32, x, y);
 
 	cr = cairo_create(flipped);
+
+	if (clip_width > 0 && clip_height > 0) {
+		/* Clip out a rectangular area, e.g. to ignore desktop bars, etc. */
+		printf("%d %d %d %d\n", clip_x, clip_y, clip_width, clip_height);
+		cairo_move_to(cr, clip_x, clip_y);
+		cairo_rel_line_to(cr, clip_width, 0);
+		cairo_rel_line_to(cr, 0, clip_height);
+		cairo_rel_line_to(cr, -clip_width, 0);
+		cairo_rel_line_to(cr, 0, -clip_height);
+		cairo_close_path(cr);
+
+		cairo_clip(cr);
+	}
+
 	cairo_translate(cr, 0.0, y);
 	cairo_scale(cr, 1.0, -1.0);
 	cairo_set_source_surface(cr, surface, 0, 0);
 	cairo_paint(cr);
+
 	cairo_destroy(cr);
 	cairo_surface_destroy(surface);
 
@@ -262,7 +279,8 @@ dump_image(const char *filename, int x, int y, uint32_t *image)
 
 static void
 record_screenshot(struct wl_client *client, struct wl_resource *resource,
-		  const char *basename)
+		  const char *basename, unsigned int clip_x, unsigned int clip_y,
+		  unsigned int clip_width, unsigned int clip_height)
 {
 	struct weston_output *o;
 	struct weston_test *test = wl_resource_get_user_data(resource);
@@ -295,7 +313,8 @@ record_screenshot(struct wl_client *client, struct wl_resource *resource,
 		if (asprintf(&filename, "%s-%d.png", basename, head) < 0)
 			return;
 
-		dump_image(filename, w, h, buffer);
+		dump_image(filename, w, h, buffer,
+			   clip_x, clip_y, clip_width, clip_height);
 		free(filename);
 		free(buffer);
 		head++;

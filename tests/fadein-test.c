@@ -28,6 +28,9 @@
 
 #include "weston-test-client-helper.h"
 
+#define DISPLAY_WIDTH 320
+#define DISPLAY_HEIGHT 240
+
 char *server_parameters="--use-pixman --width=320 --height=240";
 
 static char*
@@ -100,21 +103,29 @@ TEST(headless)
 		snprintf(basename, sizeof basename, "fadein-%02d", i);
 		// FIXME: Iterate over all heads
 		out_path = output_filename(basename, 0);
-		ref_path = reference_filename(basename, 0);
 
+		/* Use a thin 40xN vertical strip for comparison */
 		// FIXME: Would be preferred to pass in out_path rather than basename here...
-		wl_test_record_screenshot(client->test->wl_test, basename);
+		wl_test_record_screenshot(client->test->wl_test, basename,
+					  80, 40, 40, DISPLAY_HEIGHT-80);
 		client_roundtrip(client);
-		if (i == 0) {
-			if (files_equal(out_path, ref_path))
-				printf("%s is correct\n", out_path);
-			else
-				printf("%s doesn't match reference %s\n", out_path, ref_path);
+
+		// We skip testing the 2nd step of the fade in because the timing
+		// can result in significantly different colors from run to run
+		if (i == 2) {
+			// At t=0.5, the screen fade colors are changing rapidly,
+			// so just verify the screen is different than at t=0.25.
+			snprintf(basename, sizeof basename, "fadein-%02d", 1);
+			ref_path = reference_filename(basename, 0);
+			assert(! files_equal(out_path, ref_path));
+		} else {
+			ref_path = reference_filename(basename, 0);
+			assert(files_equal(out_path, ref_path));
 		}
+
 		free (out_path);
 		free (ref_path);
 
 		usleep(250000);
 	}
-
 }
