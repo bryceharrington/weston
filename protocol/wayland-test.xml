@@ -60,6 +60,10 @@
     </event>
     <request name="record_screenshot">
       <arg name="basename" type="string"/>
+      <arg name="clip_x" type="uint"/>
+      <arg name="clip_y" type="uint"/>
+      <arg name="clip_width" type="uint"/>
+      <arg name="clip_height" type="uint"/>
     </request>
   </interface>
 </protocol>
