@@ -278,46 +278,48 @@ dump_image(const char *filename, int x, int y, uint32_t *image,
 
 static void
 record_screenshot(struct wl_client *client, struct wl_resource *resource,
-		  const char *basename, unsigned int clip_x, unsigned int clip_y,
+		  const char *filename, unsigned int output_number,
+		  unsigned int clip_x, unsigned int clip_y,
 		  unsigned int clip_width, unsigned int clip_height)
 {
 	struct weston_output *o;
 	struct weston_test *test = wl_resource_get_user_data(resource);
-	char *filename;
 	uint32_t *buffer;
-	int w, h, head = 0;
+	int w, h = 0;
+	unsigned int i = 0;
 
+	assert(output_number < (unsigned int)wl_list_length(&test->compositor->output_list));
 	wl_list_for_each(o, &test->compositor->output_list, link) {
-		switch (o->transform) {
-		case WL_OUTPUT_TRANSFORM_90:
-		case WL_OUTPUT_TRANSFORM_270:
-		case WL_OUTPUT_TRANSFORM_FLIPPED_90:
-		case WL_OUTPUT_TRANSFORM_FLIPPED_270:
-			w = o->height;
-			h = o->width;
+		if (i == output_number)
 			break;
-		default:
-			w = o->width;
-			h = o->height;
-			break;
-		}
-		buffer = malloc(w * h * 4);
-		if (!buffer)
-			return;
-
-		test->compositor->renderer->read_pixels(o,
-					      o->compositor->read_format,
-					      buffer, 0, 0, w, h);
-
-		if (asprintf(&filename, "%s-%d.png", basename, head) < 0)
-			return;
-
-		dump_image(filename, w, h, buffer,
-			   clip_x, clip_y, clip_width, clip_height);
-		free(filename);
-		free(buffer);
-		head++;
+		i++;
 	}
+	assert(i == output_number);
+
+	switch (o->transform) {
+	case WL_OUTPUT_TRANSFORM_90:
+	case WL_OUTPUT_TRANSFORM_270:
+	case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+	case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+		w = o->height;
+		h = o->width;
+		break;
+	default:
+		w = o->width;
+		h = o->height;
+		break;
+	}
+	buffer = malloc(w * h * 4);
+	if (!buffer)
+		return;
+
+	test->compositor->renderer->read_pixels(o,
+						o->compositor->read_format,
+						buffer, 0, 0, w, h);
+
+	dump_image(filename, w, h, buffer,
+		   clip_x, clip_y, clip_width, clip_height);
+	free(buffer);
 }
 
 static const struct wl_test_interface test_implementation = {
