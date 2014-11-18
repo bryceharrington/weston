@@ -657,3 +657,37 @@ files_equal(const char *test_filename, const char* ref_filename)
 
         return t == p;  /* both EOF */
 }
+
+static const char*
+_output_path(void) {
+	char *path = getenv("WAYLAND_TEST_OUTPUT_PATH");
+	if (!path)
+		return ".";
+	return path;
+}
+
+char*
+screenshot_output_filename(const char* basename, uint32_t seq, uint32_t head_number) {
+        char *filename;
+        if (asprintf(&filename, "%s/%s-%02d-%d.png",
+		     _output_path(), basename, seq, head_number) < 0)
+		return NULL;
+        return filename;
+}
+
+static const char*
+_reference_path(void) {
+	char *path = getenv("WAYLAND_TEST_REFERENCE_PATH");
+	if (!path)
+		return "./tests/reference";
+	return path;
+}
+
+char*
+screenshot_reference_filename(const char* basename, uint32_t seq, uint32_t head) {
+        char *filename;
+        if (asprintf(&filename, "%s/%s-%02d-%d.png",
+		     _reference_path(), basename, seq, head) < 0)
+                return NULL;
+        return filename;
+}

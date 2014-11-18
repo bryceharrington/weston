@@ -59,7 +59,8 @@
       <arg name="n" type="uint"/>
     </event>
     <request name="record_screenshot">
-      <arg name="basename" type="string"/>
+      <arg name="filename" type="string"/>
+      <arg name="head" type="uint"/>
       <arg name="clip_x" type="uint"/>
       <arg name="clip_y" type="uint"/>
       <arg name="clip_width" type="uint"/>
