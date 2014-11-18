@@ -33,28 +33,6 @@
 
 char *server_parameters="--use-pixman --width=320 --height=240";
 
-static char*
-output_filename(const char* basename, int head_number) {
-	static const char *path = "./";
-	char *filename;
-
-        if (asprintf(&filename, "%s%s-%d.png", path, basename, head_number) < 0)
-		filename = NULL;
-
-	return filename;
-}
-
-static char*
-reference_filename(const char* basename, int head) {
-        static const char *path = "./tests/reference/";
-        char *filename;
-
-        if (asprintf(&filename, "%s%s-%d.png", path, basename, head) < 0)
-                filename = NULL;
-
-        return filename;
-}
-
 TEST(headless)
 {
 	struct client *client;
@@ -62,14 +40,14 @@ TEST(headless)
 	char *out_path;
 	char *ref_path;
 	int i;
-	unsigned int head_number = 0;
+	uint32_t head_number = 0;
 
 	client = client_create(100, 100, 100, 100);
 	assert(client);
 
 	for (i = 0; i < 6; i++) {
 		snprintf(basename, sizeof basename, "fadein-%02d", i);
-		out_path = output_filename(basename, head_number);
+		out_path = screenshot_output_filename(basename, head_number);
 
 		/* Use a thin 40xN vertical strip for comparison */
 		wl_test_record_screenshot(client->test->wl_test,
@@ -83,10 +61,10 @@ TEST(headless)
 			// At t=0.5, the screen fade colors are changing rapidly,
 			// so just verify the screen is different than at t=0.25.
 			snprintf(basename, sizeof basename, "fadein-%02d", 1);
-			ref_path = reference_filename(basename, 0);
+			ref_path = screenshot_reference_filename(basename, 0);
 			assert(! files_equal(out_path, ref_path));
 		} else {
-			ref_path = reference_filename(basename, 0);
+			ref_path = screenshot_reference_filename(basename, 0);
 			assert(files_equal(out_path, ref_path));
 		}
 

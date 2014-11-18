@@ -140,4 +140,10 @@ expect_protocol_error(struct client *client,
 bool
 files_equal(const char *file_1, const char *file_2);
 
+char*
+screenshot_output_filename(const char* basename, uint32_t head_number);
+
+char*
+screenshot_reference_filename(const char* basename, uint32_t head);
+
 #endif

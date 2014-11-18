@@ -657,3 +657,25 @@ files_equal(const char *test_filename, const char* ref_filename)
 
         return t == p;  /* both EOF */
 }
+
+char*
+screenshot_output_filename(const char* basename, uint32_t head_number) {
+        static const char *path = "./";
+        char *filename;
+
+        if (asprintf(&filename, "%s%s-%d.png", path, basename, head_number) < 0)
+                filename = NULL;
+
+        return filename;
+}
+
+char*
+screenshot_reference_filename(const char* basename, uint32_t head) {
+        static const char *path = "./tests/reference/";
+        char *filename;
+
+        if (asprintf(&filename, "%s%s-%d.png", path, basename, head) < 0)
+                filename = NULL;
+
+        return filename;
+}
