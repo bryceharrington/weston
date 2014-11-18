@@ -26,6 +26,8 @@
 #include "config.h"
 
 #include <assert.h>
+#include <stdbool.h>
+
 #include "weston-test-runner.h"
 #include "wayland-test-client-protocol.h"
 
@@ -134,5 +136,8 @@ skip(const char *fmt, ...);
 void
 expect_protocol_error(struct client *client,
 		      const struct wl_interface *intf, uint32_t code);
+
+bool
+files_equal(const char *file_1, const char *file_2);
 
 #endif

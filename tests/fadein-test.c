@@ -55,39 +55,6 @@ reference_filename(const char* basename, int head) {
         return filename;
 }
 
-static bool
-files_equal(const char *test_filename, const char* ref_filename)
-{
-        FILE *test, *ref;
-        int t, p;
-
-        if (test_filename == NULL || ref_filename == NULL)
-                return false;
-
-        test = fopen (test_filename, "rb");
-        if (test == NULL)
-                return false;
-
-        ref = fopen (ref_filename, "rb");
-        if (ref == NULL) {
-                fclose (test);
-                return false;
-        }
-
-        do {
-                t = getc (test);
-                p = getc (ref);
-                if (t != p)
-                        break;
-        } while (t != EOF && p != EOF);
-
-        fclose (test);
-        fclose (ref);
-
-        return t == p;  /* both EOF */
-}
-
-
 TEST(headless)
 {
 	struct client *client;
