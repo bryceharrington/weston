@@ -254,7 +254,6 @@ dump_image(const char *filename, int x, int y, uint32_t *image,
 
 	if (clip_width > 0 && clip_height > 0) {
 		/* Clip out a rectangular area, e.g. to ignore desktop bars, etc. */
-		printf("%d %d %d %d\n", clip_x, clip_y, clip_width, clip_height);
 		cairo_move_to(cr, clip_x, clip_y);
 		cairo_rel_line_to(cr, clip_width, 0);
 		cairo_rel_line_to(cr, 0, clip_height);
