@@ -613,3 +613,37 @@ client_create(int x, int y, int width, int height)
 
 	return client;
 }
+
+static const char*
+_output_path(void) {
+	char *path = getenv("WESTON_TEST_OUTPUT_PATH");
+	if (!path)
+		return ".";
+	return path;
+	}
+
+char*
+screenshot_output_filename(const char* basename, uint32_t seq) {
+	char *filename;
+	if (asprintf(&filename, "%s/%s-%02d.png",
+		     _output_path(), basename, seq) < 0)
+		return NULL;
+	return filename;
+}
+
+static const char*
+_reference_path(void) {
+	char *path = getenv("WESTON_TEST_REFERENCE_PATH");
+	if (!path)
+		return "./tests/reference";
+	return path;
+}
+
+char*
+screenshot_reference_filename(const char* basename, uint32_t seq) {
+	char *filename;
+	if (asprintf(&filename, "%s/%s-%02d.png",
+		     _reference_path(), basename, seq) < 0)
+		return NULL;
+	return filename;
+}
