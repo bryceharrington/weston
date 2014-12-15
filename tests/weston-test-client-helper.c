@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -646,4 +647,25 @@ screenshot_reference_filename(const char* basename, uint32_t seq) {
 		     _reference_path(), basename, seq) < 0)
 		return NULL;
 	return filename;
+}
+
+bool
+check_surfaces_match(const struct surface *a, const struct rectangle *clip,
+		     const struct surface *b)
+{
+	if (a->width != b->width || a->height != b->width)
+		return false;
+	// FIXME: Implement me!
+	return true;
+}
+
+bool
+check_solid_color(const struct surface *surface, const struct rectangle *clip,
+		  float red, float green, float blue, float alpha)
+{
+	if (clip != NULL &&
+	    (clip->x > surface->width || clip->y > surface->height))
+		return false;
+	// FIXME: Implement me!
+	return true;
 }

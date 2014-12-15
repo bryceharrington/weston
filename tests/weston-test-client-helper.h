@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include <stdbool.h>
 #include <assert.h>
 #include "weston-test-runner.h"
 #include "wayland-test-client-protocol.h"
@@ -101,6 +102,13 @@ struct surface {
 	void *data;
 };
 
+struct rectangle {
+	int x;
+	int y;
+	int width;
+	int height;
+};
+
 static inline void *
 xzalloc(size_t size)
 {
@@ -151,5 +159,14 @@ screenshot_output_filename(const char* basename, uint32_t seq);
 
 char*
 screenshot_reference_filename(const char* basename, uint32_t seq);
+
+bool
+check_surfaces_match(const struct surface *a, const struct rectangle *clip,
+		     const struct surface *b);
+
+bool
+check_solid_color(const struct surface *surface,  const struct rectangle *clip,
+                  float red, float green, float blue, float alpha);
+
 
 #endif
