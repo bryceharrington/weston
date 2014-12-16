@@ -58,5 +58,21 @@
     <event name="n_egl_buffers">
       <arg name="n" type="uint"/>
     </event>
+    <request name="capture_screenshot">
+      <description summary="records current screen image">
+	Records an image of what is currently displayed on a given
+	display output, returning the image as a screen_image event.
+      </description>
+      <arg name="output" type="object" interface="wl_output"
+	   summary="output to capture from"/>
+    </request>
+    <event name="screen_image">
+      <description summary="screen_image event">
+	This event provides the test client a screen capture of a
+	specific display output provided as a wl_buffer.
+      </description>
+      <arg name="buffer" type="object" interface="wl_buffer"
+	   summary="wl_shm-based buffer containing the screenshot pixels"/>
+    </event>
   </interface>
 </protocol>

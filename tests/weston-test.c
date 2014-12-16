@@ -235,6 +235,24 @@ get_n_buffers(struct wl_client *client, struct wl_resource *resource)
 	wl_test_send_n_egl_buffers(resource, n_buffers);
 }
 
+/**
+ * Grabs a snapshot of the screen.
+ */
+static void
+capture_screenshot(struct wl_client *client, struct wl_resource *resource,
+	struct wl_output *output)
+{
+	struct weston_output *o;
+	struct weston_test *test = wl_resource_get_user_data(resource);
+
+	// TODO: What does read_pixels do?
+	wl_list_for_each(o, &test->compositor->output_list, link) {
+		test->compositor->renderer->read_pixels(o->compositor->read_format,
+							buffer, 0, 0, w, h);
+		// TODO: Create an event returning the surface
+	}
+}
+
 static const struct wl_test_interface test_implementation = {
 	move_surface,
 	move_pointer,
@@ -242,6 +260,7 @@ static const struct wl_test_interface test_implementation = {
 	activate_surface,
 	send_key,
 	get_n_buffers,
+	capture_screenshot,
 };
 
 static void
