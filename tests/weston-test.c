@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <signal.h>
 #include <unistd.h>
+#include <cairo.h>
 
 #include "../src/compositor.h"
 #include "wayland-test-server-protocol.h"
@@ -235,6 +236,30 @@ get_n_buffers(struct wl_client *client, struct wl_resource *resource)
 	wl_test_send_n_egl_buffers(resource, n_buffers);
 }
 
+static void
+dump_image(const char *filename, int x, int y, uint32_t *image)
+{
+	cairo_surface_t *surface, *flipped;
+	cairo_t *cr;
+
+	surface = cairo_image_surface_create_for_data((unsigned char *)image,
+						      CAIRO_FORMAT_ARGB32,
+						      x, y, x * 4);
+       flipped = cairo_surface_create_similar_image(surface, CAIRO_FORMAT_ARGB32, x, y);
+
+       cr = cairo_create(flipped);
+       cairo_translate(cr, 0.0, y);
+       cairo_scale(cr, 1.0, -1.0);
+       cairo_set_source_surface(cr, surface, 0, 0);
+       cairo_paint(cr);
+       cairo_destroy(cr);
+       cairo_surface_destroy(surface);
+
+       cairo_surface_write_to_png(flipped, filename);
+       cairo_surface_destroy(flipped);
+}
+
+
 /**
  * Grabs a snapshot of the screen.
  */
@@ -244,13 +269,21 @@ capture_screenshot(struct wl_client *client, struct wl_resource *resource,
 {
 	struct weston_output *o;
 	struct weston_test *test = wl_resource_get_user_data(resource);
+	uint32_t *buffer;
+
+	// FIXME: Needs to handle output transformations
+
+	buffer = malloc(output->width * output_height * 4);
+	if (buffer == NULL)
+		return;
 
 	// TODO: What does read_pixels do?
-	wl_list_for_each(o, &test->compositor->output_list, link) {
-		test->compositor->renderer->read_pixels(o->compositor->read_format,
-							buffer, 0, 0, w, h);
-		// TODO: Create an event returning the surface
-	}
+	test->compositor->renderer->read_pixels(output, output->compositor->read_format,
+						buffer, 0, 0, output->width, output->height);
+
+	// TODO: Create an event returning the surface
+	dump_image("screenshot.png", output->width, output->height, buffer);
+	free(buffer);
 }
 
 static const struct wl_test_interface test_implementation = {
