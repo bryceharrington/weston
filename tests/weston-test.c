@@ -265,24 +265,25 @@ dump_image(const char *filename, int x, int y, uint32_t *image)
  */
 static void
 capture_screenshot(struct wl_client *client, struct wl_resource *resource,
-	struct wl_output *output)
+	struct wl_resource *output_resource)
 {
-	struct weston_output *o;
+	struct weston_output *o = output_resource ?
+                wl_resource_get_user_data(output_resource) : NULL;
 	struct weston_test *test = wl_resource_get_user_data(resource);
 	uint32_t *buffer;
 
 	// FIXME: Needs to handle output transformations
 
-	buffer = malloc(output->width * output_height * 4);
+	buffer = malloc(o->width * o->height * 4);
 	if (buffer == NULL)
 		return;
 
 	// TODO: What does read_pixels do?
-	test->compositor->renderer->read_pixels(output, output->compositor->read_format,
-						buffer, 0, 0, output->width, output->height);
+	test->compositor->renderer->read_pixels(o, o->compositor->read_format,
+						buffer, 0, 0, o->width, o->height);
 
 	// TODO: Create an event returning the surface
-	dump_image("screenshot.png", output->width, output->height, buffer);
+	dump_image("screenshot.png", o->width, o->height, buffer);
 	free(buffer);
 }
 
