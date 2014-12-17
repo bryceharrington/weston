@@ -29,36 +29,15 @@
 
 char *server_parameters="--use-pixman --width=320 --height=240";
 
-static char*
-output_filename(const char* basename) {
-	static const char *path = "./";
-	char *filename;
-
-        if (asprintf(&filename, "%s%s", path, basename) < 0)
-		filename = NULL;
-
-	return filename;
-}
-
 TEST(fadein)
 {
 	struct client *client;
-	char basename[32];
-	char *out_path;
-	int i;
 
 	client = client_create(100, 100, 100, 100);
 	assert(client);
 
-	for (i = 0; i < 6; i++) {
-		snprintf(basename, sizeof basename, "fadein-%02d", i);
-		out_path = output_filename(basename);
+	usleep(750000);
 
-		wl_test_record_screenshot(client->test->wl_test, out_path);
-		client_roundtrip(client);
-		free (out_path);
-
-		usleep(250000);
-	}
-
+	wl_test_capture_screenshot(client->test->wl_test, client->output->wl_output);
+	client_roundtrip(client);
 }
