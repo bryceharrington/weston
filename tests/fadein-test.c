@@ -32,6 +32,11 @@ char *server_parameters="--use-pixman --width=320 --height=240";
 TEST(fadein)
 {
 	struct client *client;
+	struct surface *screenshot = NULL;
+	struct surface *reference = NULL;
+	struct rectangle clip;
+	bool match = false;
+	bool dump_all_images = true;
 
 	client = client_create(100, 100, 100, 100);
 	assert(client);
@@ -40,4 +45,17 @@ TEST(fadein)
 
 	wl_test_capture_screenshot(client->test->wl_test, client->output->wl_output);
 	client_roundtrip(client);
+
+	// TODO: Receive screenshot from event
+	clip.x = 0;
+	clip.y = 0;
+	clip.width = client->output->width;
+	clip.height = client->output->height;
+
+	match = check_surfaces_match(screenshot, &clip, reference);
+	if (!match || dump_all_images) {
+		// TODO: Write image to .png file
+	}
+	assert(match);
+
 }
