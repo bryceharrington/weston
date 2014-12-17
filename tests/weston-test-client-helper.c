@@ -653,9 +653,29 @@ bool
 check_surfaces_match(const struct surface *a, const struct rectangle *clip,
 		     const struct surface *b)
 {
+	int x, y, w, h;
+
+	if (a == NULL || b == NULL)
+		return false;
 	if (a->width != b->width || a->height != b->width)
 		return false;
-	// FIXME: Implement me!
+
+	if (clip == NULL) {
+		x = y = 0;
+		w = a->width;
+		h = a->height;
+	} else {
+		x = clip->x;
+		y = clip->y;
+		w = clip->width;
+		h = clip->height;
+	}
+
+	for (; x < w; x++)
+		for (; y < h; y++)
+			if ( 1 == 2 ) // FIXME: Implement me!
+				return false;
+
 	return true;
 }
 
@@ -663,6 +683,8 @@ bool
 check_solid_color(const struct surface *surface, const struct rectangle *clip,
 		  float red, float green, float blue, float alpha)
 {
+	if (surface == NULL)
+		return false;
 	if (clip != NULL &&
 	    (clip->x > surface->width || clip->y > surface->height))
 		return false;
