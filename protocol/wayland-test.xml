@@ -65,6 +65,8 @@
       </description>
       <arg name="output" type="object" interface="wl_output"
 	   summary="output to capture from"/>
+      <arg name="buffer" type="object" interface="wl_buffer"
+	   summary="buffer for returning screenshots to the test client"/>
     </request>
     <event name="screen_image">
       <description summary="screen_image event">
@@ -73,6 +75,8 @@
       </description>
       <arg name="buffer" type="object" interface="wl_buffer"
 	   summary="wl_shm-based buffer containing the screenshot pixels"/>
+    </event>
+    <event name="capture_screenshot_done">
     </event>
   </interface>
 </protocol>
