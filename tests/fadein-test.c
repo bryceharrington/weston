@@ -28,6 +28,21 @@
 #include "weston-test-client-helper.h"
 
 char *server_parameters="--use-pixman --width=320 --height=240";
+int buffer_copy_done;
+
+/*
+ * Does the test infrastructure take care of hooking this up for us?
+
+static void
+screenshot_done(void *data, struct wl_test *test)
+{
+	buffer_copy_done = 1;
+}
+
+static const struct wl_test_listener wl_test_listener = {
+        screenshot_done
+};
+*/
 
 TEST(fadein)
 {
@@ -41,10 +56,19 @@ TEST(fadein)
 	client = client_create(100, 100, 100, 100);
 	assert(client);
 
+	//  Create screenshot and attach buffer
+	screenshot->wl_buffer = create_shm_buffer(client,
+						  client->output->width,
+						  client->output->height,
+						  &screenshot->data);
+
 	usleep(750000);
 
-	wl_test_capture_screenshot(client->test->wl_test, client->output->wl_output);
-	client_roundtrip(client);
+	wl_test_capture_screenshot(client->test->wl_test,
+				   client->output->wl_output,
+				   screenshot->wl_buffer);
+	while (!buffer_copy_done)
+		client_roundtrip(client);
 
 	// TODO: Receive screenshot from event
 	clip.x = 0;
@@ -52,7 +76,7 @@ TEST(fadein)
 	clip.width = client->output->width;
 	clip.height = client->output->height;
 
-	match = check_surfaces_match(screenshot, &clip, reference);
+	match = check_match(screenshot, &clip, reference);
 	if (!match || dump_all_images) {
 		// TODO: Write image to .png file
 	}
