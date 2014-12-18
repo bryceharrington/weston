@@ -236,6 +236,36 @@ get_n_buffers(struct wl_client *client, struct wl_resource *resource)
 	wl_test_send_n_egl_buffers(resource, n_buffers);
 }
 
+// TODO: Either move these to top, or unify with screenshooter.c code
+#include <string.h> // memcpy
+
+// TODO: Where's the right place for this?
+// TODO: Maybe use weston_screenshooter_outcome instead?
+enum weston_test_screenshooter_outcome {
+	WESTON_TEST_SCREENSHOOTER_SUCCESS,
+	WESTON_TEST_SCREENSHOOTER_NO_MEMORY,
+	WESTON_TEST_SCREENSHOOTER_BAD_BUFFER
+	};
+
+typedef void (*weston_test_screenshooter_done_func_t)(void *data,
+						      enum weston_test_screenshooter_outcome outcome);
+
+struct test_screenshooter {
+        struct weston_compositor *ec;
+        struct wl_global *global;
+        struct wl_client *client;
+	struct weston_process process;
+        struct wl_listener destroy_listener;
+};
+
+struct test_screenshooter_frame_listener {
+	struct wl_listener listener;
+        struct weston_buffer *buffer;
+	weston_test_screenshooter_done_func_t done;
+        void *data;
+};
+
+/*
 static void
 dump_image(const char *filename, int x, int y, uint32_t *image)
 {
@@ -258,25 +288,175 @@ dump_image(const char *filename, int x, int y, uint32_t *image)
        cairo_surface_write_to_png(flipped, filename);
        cairo_surface_destroy(flipped);
 }
+*/
 
-
-/**
- * Grabs a snapshot of the screen.
- */
 static void
-capture_screenshot(struct wl_client *client, struct wl_resource *resource,
-	struct wl_resource *output_resource)
+copy_bgra_yflip(uint8_t *dst, uint8_t *src, int height, int stride)
 {
-	struct weston_output *o = output_resource ?
-                wl_resource_get_user_data(output_resource) : NULL;
-	struct weston_test *test = wl_resource_get_user_data(resource);
-	uint32_t *buffer;
+        uint8_t *end;
 
+        end = dst + height * stride;
+	while (dst < end) {
+                memcpy(dst, src, stride);
+                dst += stride;
+                src -= stride;
+        }
+}
+
+static void
+copy_bgra(uint8_t *dst, uint8_t *src, int height, int stride)
+{
+        /* TODO: optimize this out */
+        memcpy(dst, src, height * stride);
+}
+
+static void
+copy_row_swap_RB(void *vdst, void *vsrc, int bytes)
+{
+        uint32_t *dst = vdst;
+	uint32_t *src = vsrc;
+        uint32_t *end = dst + bytes / 4;
+
+        while (dst < end) {
+		uint32_t v = *src++;
+		/*                    A R G B */
+		uint32_t tmp = v & 0xff00ff00;
+                tmp |= (v >> 16) & 0x000000ff;
+		tmp |= (v << 16) & 0x00ff0000;
+                *dst++ = tmp;
+        }
+}
+
+static void
+copy_rgba_yflip(uint8_t *dst, uint8_t *src, int height, int stride)
+{
+        uint8_t *end;
+
+        end = dst + height * stride;
+	while (dst < end) {
+                copy_row_swap_RB(dst, src, stride);
+                dst += stride;
+                src -= stride;
+        }
+}
+
+static void
+copy_rgba(uint8_t *dst, uint8_t *src, int height, int stride)
+{
+        uint8_t *end;
+
+        end = dst + height * stride;
+        while (dst < end) {
+                copy_row_swap_RB(dst, src, stride);
+		dst += stride;
+		src += stride;
+	}
+}
+
+
+static void
+test_screenshooter_frame_notify(struct wl_listener *listener, void *data)
+{
+        struct test_screenshooter_frame_listener *l =
+                container_of(listener,
+                             struct test_screenshooter_frame_listener, listener);
+        struct weston_output *output = data;
+        struct weston_compositor *compositor = output->compositor;
+        int32_t stride;
+        uint8_t *pixels, *d, *s;
+
+        output->disable_planes--;
+        wl_list_remove(&listener->link);
+        stride = l->buffer->width * (PIXMAN_FORMAT_BPP(compositor->read_format) / 8);
+        pixels = malloc(stride * l->buffer->height);
+
+        if (pixels == NULL) {
+                l->done(l->data, WESTON_TEST_SCREENSHOOTER_NO_MEMORY);
+                free(l);
+                return;
+        }
+
+        compositor->renderer->read_pixels(output,
+					  compositor->read_format, pixels,
+					  0, 0, output->current_mode->width,
+					  output->current_mode->height);
+
+	stride = wl_shm_buffer_get_stride(l->buffer->shm_buffer);
+
+	d = wl_shm_buffer_get_data(l->buffer->shm_buffer);
+        s = pixels + stride * (l->buffer->height - 1);
+
+        wl_shm_buffer_begin_access(l->buffer->shm_buffer);
+
+        switch (compositor->read_format) {
+	case PIXMAN_a8r8g8b8:
+	case PIXMAN_x8r8g8b8:
+                if (compositor->capabilities & WESTON_CAP_CAPTURE_YFLIP)
+			copy_bgra_yflip(d, s, output->current_mode->height, stride);
+                else
+                        copy_bgra(d, pixels, output->current_mode->height, stride);
+		break;
+        case PIXMAN_x8b8g8r8:
+        case PIXMAN_a8b8g8r8:
+                if (compositor->capabilities & WESTON_CAP_CAPTURE_YFLIP)
+                        copy_rgba_yflip(d, s, output->current_mode->height, stride);
+                else
+                        copy_rgba(d, pixels, output->current_mode->height, stride);
+                break;
+        default:
+                break;
+        }
+
+        wl_shm_buffer_end_access(l->buffer->shm_buffer);
+
+        l->done(l->data, WESTON_TEST_SCREENSHOOTER_SUCCESS);
+        free(pixels);
+        free(l);
+}
+
+//WL_EXPORT int
+static int  // TODO: Should return bool
+weston_test_screenshooter_shoot(struct weston_output *output,
+				struct weston_buffer *buffer,
+				weston_test_screenshooter_done_func_t done,
+				void *data)
+{
+	struct test_screenshooter_frame_listener *l;
+
+        if (!wl_shm_buffer_get(buffer->resource)) {
+		done(data, WESTON_TEST_SCREENSHOOTER_BAD_BUFFER);
+                return -1;
+        }
+
+        buffer->shm_buffer = wl_shm_buffer_get(buffer->resource);
+	buffer->width = wl_shm_buffer_get_width(buffer->shm_buffer);
+	buffer->height = wl_shm_buffer_get_height(buffer->shm_buffer);
+
+        if (buffer->width < output->current_mode->width ||
+            buffer->height < output->current_mode->height) {
+		done(data, WESTON_TEST_SCREENSHOOTER_BAD_BUFFER);
+                return -1;
+        }
+
+        l = malloc(sizeof *l);
+        if (l == NULL) {
+                done(data, WESTON_TEST_SCREENSHOOTER_NO_MEMORY);
+		return -1;
+        }
+
+        l->buffer = buffer;
+        l->done = done;
+        l->data = data;
+        l->listener.notify = test_screenshooter_frame_notify;
+        wl_signal_add(&output->frame_signal, &l->listener);
+        output->disable_planes++;
+	weston_output_schedule_repaint(output);
+
+	return 0;
+}
+
+/*
 	// FIXME: Needs to handle output transformations
-
-	buffer = malloc(o->width * o->height * 4);
-	if (buffer == NULL)
-		return;
 
 	// TODO: What does read_pixels do?
 	test->compositor->renderer->read_pixels(o, o->compositor->read_format,
@@ -285,6 +465,48 @@ capture_screenshot(struct wl_client *client, struct wl_resource *resource,
 	// TODO: Create an event returning the surface
 	dump_image("screenshot.png", o->width, o->height, buffer);
 	free(buffer);
+*/
+
+static void
+test_screenshooter_done(void *data, enum weston_test_screenshooter_outcome outcome)
+{
+        struct wl_resource *resource = data;
+
+        switch (outcome) {
+        case WESTON_TEST_SCREENSHOOTER_SUCCESS:
+                wl_test_send_capture_screenshot_done(resource);
+                break;
+        case WESTON_TEST_SCREENSHOOTER_NO_MEMORY:
+                wl_resource_post_no_memory(resource);
+                break;
+        default:
+                break;
+        }
+}
+
+
+/**
+ * Grabs a snapshot of the screen.
+ */
+static void
+capture_screenshot(struct wl_client *client,
+		   struct wl_resource *resource,
+		   struct wl_resource *output_resource,
+		   struct wl_resource *buffer_resource)
+{
+//	struct weston_test *test =
+//		wl_resource_get_user_data(resource);
+	struct weston_output *output =
+		wl_resource_get_user_data(output_resource);
+	struct weston_buffer *buffer =
+		weston_buffer_from_resource(buffer_resource);
+
+	if (buffer == NULL) {
+		wl_resource_post_no_memory(resource);
+		return;
+	}
+
+	weston_test_screenshooter_shoot(output, buffer, test_screenshooter_done, resource);
 }
 
 static const struct wl_test_interface test_implementation = {
