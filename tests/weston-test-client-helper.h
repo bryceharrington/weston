@@ -161,8 +161,8 @@ char*
 screenshot_reference_filename(const char* basename, uint32_t seq);
 
 bool
-check_surfaces_match(const struct surface *a, const struct rectangle *clip,
-		     const struct surface *b);
+check_match(const struct surface *a, const struct rectangle *clip,
+	    const struct surface *b);
 
 bool
 check_solid_color(const struct surface *surface,  const struct rectangle *clip,

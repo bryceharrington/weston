@@ -650,8 +650,8 @@ screenshot_reference_filename(const char* basename, uint32_t seq) {
 }
 
 bool
-check_surfaces_match(const struct surface *a, const struct rectangle *clip,
-		     const struct surface *b)
+check_match(const struct surface *a, const struct rectangle *clip,
+	    const struct surface *b)
 {
 	int x, y, w, h;
 
@@ -661,7 +661,8 @@ check_surfaces_match(const struct surface *a, const struct rectangle *clip,
 		return false;
 
 	if (clip == NULL) {
-		x = y = 0;
+		x = 0;
+		y = 0;
 		w = a->width;
 		h = a->height;
 	} else {
