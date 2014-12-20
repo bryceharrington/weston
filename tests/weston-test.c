@@ -265,9 +265,8 @@ struct test_screenshooter_frame_listener {
         void *data;
 };
 
-/*
 static void
-dump_image(const char *filename, int x, int y, uint32_t *image)
+dump_image(const char *filename, int x, int y, uint8_t *image)
 {
 	cairo_surface_t *surface, *flipped;
 	cairo_t *cr;
@@ -275,20 +274,19 @@ dump_image(const char *filename, int x, int y, uint32_t *image)
 	surface = cairo_image_surface_create_for_data((unsigned char *)image,
 						      CAIRO_FORMAT_ARGB32,
 						      x, y, x * 4);
-       flipped = cairo_surface_create_similar_image(surface, CAIRO_FORMAT_ARGB32, x, y);
+	flipped = cairo_surface_create_similar_image(surface, CAIRO_FORMAT_ARGB32, x, y);
 
-       cr = cairo_create(flipped);
-       cairo_translate(cr, 0.0, y);
-       cairo_scale(cr, 1.0, -1.0);
-       cairo_set_source_surface(cr, surface, 0, 0);
-       cairo_paint(cr);
-       cairo_destroy(cr);
-       cairo_surface_destroy(surface);
+	cr = cairo_create(flipped);
+	cairo_translate(cr, 0.0, y);
+	cairo_scale(cr, 1.0, -1.0);
+	cairo_set_source_surface(cr, surface, 0, 0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
+	cairo_surface_destroy(surface);
 
-       cairo_surface_write_to_png(flipped, filename);
-       cairo_surface_destroy(flipped);
+	cairo_surface_write_to_png(flipped, filename);
+	cairo_surface_destroy(flipped);
 }
-*/
 
 static void
 copy_bgra_yflip(uint8_t *dst, uint8_t *src, int height, int stride)
@@ -370,16 +368,29 @@ test_screenshooter_frame_notify(struct wl_listener *listener, void *data)
         stride = l->buffer->width * (PIXMAN_FORMAT_BPP(compositor->read_format) / 8);
         pixels = malloc(stride * l->buffer->height);
 
+	weston_log("DBG: test_screenshooter_frame_notify: Allocated pixels\n");
+
         if (pixels == NULL) {
                 l->done(l->data, WESTON_TEST_SCREENSHOOTER_NO_MEMORY);
                 free(l);
                 return;
         }
 
+	// FIXME: Needs to handle output transformations
+
+	// TODO: Review what read_pixels does
         compositor->renderer->read_pixels(output,
-					  compositor->read_format, pixels,
-					  0, 0, output->current_mode->width,
+					  compositor->read_format,
+					  pixels,
+					  0, 0,
+					  output->current_mode->width,
 					  output->current_mode->height);
+	weston_log("DBG: Pixels are read\n");
+
+	dump_image("serverside-screenshot.png",
+		   output->current_mode->width,
+		   output->current_mode->height,
+		   pixels);
 
 	stride = wl_shm_buffer_get_stride(l->buffer->shm_buffer);
 
@@ -388,9 +399,12 @@ test_screenshooter_frame_notify(struct wl_listener *listener, void *data)
 
         wl_shm_buffer_begin_access(l->buffer->shm_buffer);
 
+	weston_log("DBG: Pixel format is %d\n", compositor->read_format);
+
         switch (compositor->read_format) {
 	case PIXMAN_a8r8g8b8:
 	case PIXMAN_x8r8g8b8:
+		weston_log("DBG: *RGB pixels\n");
                 if (compositor->capabilities & WESTON_CAP_CAPTURE_YFLIP)
 			copy_bgra_yflip(d, s, output->current_mode->height, stride);
                 else
@@ -398,6 +412,7 @@ test_screenshooter_frame_notify(struct wl_listener *listener, void *data)
 		break;
         case PIXMAN_x8b8g8r8:
         case PIXMAN_a8b8g8r8:
+		weston_log("DBG: *BGR pixels\n");
                 if (compositor->capabilities & WESTON_CAP_CAPTURE_YFLIP)
                         copy_rgba_yflip(d, s, output->current_mode->height, stride);
                 else
@@ -409,6 +424,7 @@ test_screenshooter_frame_notify(struct wl_listener *listener, void *data)
 
         wl_shm_buffer_end_access(l->buffer->shm_buffer);
 
+	weston_log("DBG: Firing off Done event\n");
         l->done(l->data, WESTON_TEST_SCREENSHOOTER_SUCCESS);
         free(pixels);
         free(l);
@@ -423,6 +439,7 @@ weston_test_screenshooter_shoot(struct weston_output *output,
 {
 	struct test_screenshooter_frame_listener *l;
 
+	/* Get the shm buffer resource the client created */
         if (!wl_shm_buffer_get(buffer->resource)) {
 		done(data, WESTON_TEST_SCREENSHOOTER_BAD_BUFFER);
                 return -1;
@@ -432,40 +449,33 @@ weston_test_screenshooter_shoot(struct weston_output *output,
 	buffer->width = wl_shm_buffer_get_width(buffer->shm_buffer);
 	buffer->height = wl_shm_buffer_get_height(buffer->shm_buffer);
 
+	/* Verify buffer is big enough */
         if (buffer->width < output->current_mode->width ||
             buffer->height < output->current_mode->height) {
 		done(data, WESTON_TEST_SCREENSHOOTER_BAD_BUFFER);
                 return -1;
         }
 
+	/* allocate the frame listener */
         l = malloc(sizeof *l);
         if (l == NULL) {
                 done(data, WESTON_TEST_SCREENSHOOTER_NO_MEMORY);
 		return -1;
         }
 
+	/* Set up the listener */
         l->buffer = buffer;
         l->done = done;
         l->data = data;
         l->listener.notify = test_screenshooter_frame_notify;
         wl_signal_add(&output->frame_signal, &l->listener);
+
+	/* Fire off a repaint */
         output->disable_planes++;
 	weston_output_schedule_repaint(output);
 
 	return 0;
 }
-
-/*
-	// FIXME: Needs to handle output transformations
-
-	// TODO: What does read_pixels do?
-	test->compositor->renderer->read_pixels(o, o->compositor->read_format,
-						buffer, 0, 0, o->width, o->height);
-
-	// TODO: Create an event returning the surface
-	dump_image("screenshot.png", o->width, o->height, buffer);
-	free(buffer);
-*/
 
 static void
 test_screenshooter_done(void *data, enum weston_test_screenshooter_outcome outcome)
@@ -500,6 +510,8 @@ capture_screenshot(struct wl_client *client,
 		wl_resource_get_user_data(output_resource);
 	struct weston_buffer *buffer =
 		weston_buffer_from_resource(buffer_resource);
+
+	weston_log("DBG: capture_screenshot\n");
 
 	if (buffer == NULL) {
 		wl_resource_post_no_memory(resource);
