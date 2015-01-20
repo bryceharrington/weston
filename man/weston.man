@@ -136,6 +136,15 @@ Do not read
 for the compositor. Avoids e.g. loading compositor modules via the
 configuration file, which is useful for unit tests.
 .TP
+.BR \-\-config\-overrides
+A comma-separated list of configuration parameters that will be set
+and take precidence over the loaded
+.I weston.ini
+file (if any).  No changes are written to the
+.I weston.ini
+on disk.  Parameters are formatted as 'section.key=value'; all three of
+section, key, and value must be specified.
+.TP
 \fB\-\^S\fR\fIname\fR, \fB\-\-socket\fR=\fIname\fR
 Weston will listen in the Wayland socket called
 .IR name .

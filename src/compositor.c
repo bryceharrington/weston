@@ -4571,6 +4571,7 @@ usage(int error_code)
 		"  --modules\t\tLoad the comma-separated list of modules\n"
 		"  --log=FILE\t\tLog to the given file\n"
 		"  --no-config\t\tDo not read weston.ini\n"
+		"  --config-overrides\tComma-separated list of sect.key=val config params\n"
 		"  -h, --help\t\tThis help message\n\n");
 
 #if defined(BUILD_DRM_COMPOSITOR)
@@ -4774,6 +4775,7 @@ int main(int argc, char *argv[])
 	char *socket_name = NULL;
 	int32_t version = 0;
 	int32_t noconfig = 0;
+	char *config_overrides = NULL;
 	int32_t numlock_on;
 	struct weston_config *config = NULL;
 	struct weston_config_section *section;
@@ -4791,6 +4793,7 @@ int main(int argc, char *argv[])
 		{ WESTON_OPTION_BOOLEAN, "help", 'h', &help },
 		{ WESTON_OPTION_BOOLEAN, "version", 0, &version },
 		{ WESTON_OPTION_BOOLEAN, "no-config", 0, &noconfig },
+		{ WESTON_OPTION_STRING, "config-overrides", 0, &config_overrides },
 	};
 
 	parse_options(core_options, ARRAY_LENGTH(core_options), &argc, argv);
@@ -4834,6 +4837,7 @@ int main(int argc, char *argv[])
 		goto out_signals;
 	}
 
+	/* Load configuration */
 	if (noconfig == 0)
 		config = weston_config_parse("weston.ini");
 	if (config != NULL) {
@@ -4842,8 +4846,26 @@ int main(int argc, char *argv[])
 	} else {
 		weston_log("Starting with no config file.\n");
 	}
-	section = weston_config_get_section(config, "core", NULL, NULL);
 
+	/* Modify config based on command line options */
+	if (config_overrides) {
+		if (config == NULL)
+			config = weston_config_create();
+		if (config == NULL) {
+			ret = EXIT_FAILURE;
+			goto out_signals;
+		}
+
+		if (!weston_config_update(config, config_overrides)) {
+			weston_log("Could not update config with overrides '%s'.\n",
+				   config_overrides);
+			ret = EXIT_FAILURE;
+			goto out_signals;
+		}
+	}
+
+	/* Set backend */
+	section = weston_config_get_section(config, "core", NULL, NULL);
 	if (!backend) {
 		weston_config_section_get_string(section, "backend", &backend,
 						 NULL);
