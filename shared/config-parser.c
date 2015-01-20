@@ -115,6 +115,33 @@ open_config_file(struct weston_config *c, const char *name)
 	return open(c->path, O_RDONLY | O_CLOEXEC);
 }
 
+static struct weston_config_section *
+config_add_section(struct weston_config *config, const char *name)
+{
+	struct weston_config_section *section;
+
+	section = malloc(sizeof *section);
+	section->name = strdup(name);
+	wl_list_init(&section->entry_list);
+	wl_list_insert(config->section_list.prev, &section->link);
+
+	return section;
+}
+
+static struct weston_config_entry *
+section_add_entry(struct weston_config_section *section,
+		  const char *key, const char *value)
+{
+	struct weston_config_entry *entry;
+
+	entry = malloc(sizeof *entry);
+	entry->key = strdup(key);
+	entry->value = strdup(value);
+	wl_list_insert(section->entry_list.prev, &entry->link);
+
+	return entry;
+}
+
 static struct weston_config_entry *
 config_section_get_entry(struct weston_config_section *section,
 			 const char *key)
@@ -172,6 +199,40 @@ weston_config_get_section(struct weston_config *config, const char *section,
 	}
 
 	return NULL;
+}
+
+/** Set a value in the configuration
+ *
+ * \param section	Data structure containing \c key to be updated
+ * \param key		Name of parameter to change
+ * \param value		String value to set \c key to
+ *
+ * \return true if the value could be set, false otherwise.
+ *
+ * This routine allows changing of specific entries in the config
+ * data loaded from a configuration file.  This does not change the
+ * config file on disk, only the values in memory.
+ */
+WL_EXPORT
+bool
+weston_config_section_set(struct weston_config_section *section,
+			  const char *key, const char *value)
+{
+	struct weston_config_entry *e;
+
+	if (section == NULL || key == NULL || value == NULL)
+		return false;
+
+	e = config_section_get_entry(section, key);
+	if (e == NULL) {
+		// If no entry, create a new one
+		e = section_add_entry(section, key, value);
+	} else {
+		// Change existing value
+		free(e->value);
+		e->value = strdup(value);
+	}
+	return (e != NULL) && (e->value != NULL);
 }
 
 WL_EXPORT
@@ -313,33 +374,6 @@ weston_config_get_libexec_dir(void)
 		return path;
 
 	return LIBEXECDIR;
-}
-
-static struct weston_config_section *
-config_add_section(struct weston_config *config, const char *name)
-{
-	struct weston_config_section *section;
-
-	section = malloc(sizeof *section);
-	section->name = strdup(name);
-	wl_list_init(&section->entry_list);
-	wl_list_insert(config->section_list.prev, &section->link);
-
-	return section;
-}
-
-static struct weston_config_entry *
-section_add_entry(struct weston_config_section *section,
-		  const char *key, const char *value)
-{
-	struct weston_config_entry *entry;
-
-	entry = malloc(sizeof *entry);
-	entry->key = strdup(key);
-	entry->value = strdup(value);
-	wl_list_insert(section->entry_list.prev, &entry->link);
-
-	return entry;
 }
 
 struct weston_config *

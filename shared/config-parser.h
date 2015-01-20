@@ -27,6 +27,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 enum config_key_type {
 	CONFIG_KEY_INTEGER,		/* typeof data = int */
 	CONFIG_KEY_UNSIGNED_INTEGER,	/* typeof data = unsigned int */
@@ -70,6 +72,9 @@ struct weston_config;
 
 struct weston_config_section *
 weston_config_get_section(struct weston_config *config, const char *section,
+			  const char *key, const char *value);
+bool
+weston_config_section_set(struct weston_config_section *section,
 			  const char *key, const char *value);
 int
 weston_config_section_get_int(struct weston_config_section *section,

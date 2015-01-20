@@ -96,6 +96,10 @@ static const char t4[] =
 	"[bambam]\n"
 	"=not valid at all\n";
 
+static const char t5[] =
+	"[foo]\n"
+	"a=b\n";
+
 int main(int argc, char *argv[])
 {
 	struct weston_config *config;
@@ -200,6 +204,24 @@ int main(int argc, char *argv[])
 
 	section = weston_config_get_section(NULL, "bucket", NULL, NULL);
 	assert(section == NULL);
+	weston_config_destroy(config);
+
+	/* Setting values */
+	config = run_test(t5);
+
+	section = weston_config_get_section(config, "foo", NULL, NULL);
+	assert(weston_config_section_set(section, "a", "c"));
+
+	section = weston_config_get_section(config, "foo", NULL, NULL);
+	r = weston_config_section_get_string(section, "a", &s, NULL);
+	assert(r == 0 && strcmp(s, "c") == 0);
+	free(s);
+
+	assert(!weston_config_section_set(NULL, "a", "c"));
+	assert(!weston_config_section_set(section, NULL, "c"));
+	assert(!weston_config_section_set(section, "a", NULL));
+
+	weston_config_destroy(config);
 
 	return 0;
 }
