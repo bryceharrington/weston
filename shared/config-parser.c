@@ -130,6 +130,27 @@ config_section_get_entry(struct weston_config_section *section,
 	return NULL;
 }
 
+/** Lookup matching section from config
+ *
+ * \param config        Configuration data source to look in
+ * \param section       Look for a section with this name (required)
+ * \param key           Only return section with this key set to value (optional)
+ * \param value         Only return section with key set to this value (optional)
+ *
+ * Looks through the weston_config data structure for a
+ * weston_config_section named \c section, and returns the first match.
+ * If \c key and \c value are specified as non-NULL, then only sections which
+ * contain the exact key=value pair will be returned.
+ *
+ * Note that the matching is case-sensitive, and is performed as string
+ * comparisons for the values, so 'foo=1', 'Foo=1', and 'foo=1.0' are not
+ * considered matches.
+ *
+ * \return a weston_config_section pointer matching criteria, or NULL if no
+ * match was found or an error occurred.
+ *
+ * \memberof weston_config
+ */
 WL_EXPORT
 struct weston_config_section *
 weston_config_get_section(struct weston_config *config, const char *section,
