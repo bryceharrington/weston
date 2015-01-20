@@ -101,7 +101,13 @@ const char *
 weston_config_get_libexec_dir(void);
 
 struct weston_config *
+weston_config_create(void);
+
+struct weston_config *
 weston_config_parse(const char *name);
+
+bool
+weston_config_update(struct weston_config *config, char *line);
 
 const char *
 weston_config_get_full_path(struct weston_config *config);

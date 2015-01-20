@@ -377,6 +377,20 @@ weston_config_get_libexec_dir(void)
 }
 
 struct weston_config *
+weston_config_create(void)
+{
+	struct weston_config *config;
+
+	config = malloc(sizeof *config);
+	if (config == NULL)
+		return NULL;
+
+	wl_list_init(&config->section_list);
+
+	return config;
+}
+
+struct weston_config *
 weston_config_parse(const char *name)
 {
 	FILE *fp;
@@ -385,11 +399,9 @@ weston_config_parse(const char *name)
 	struct weston_config_section *section = NULL;
 	int i, fd;
 
-	config = malloc(sizeof *config);
+	config = weston_config_create();
 	if (config == NULL)
 		return NULL;
-
-	wl_list_init(&config->section_list);
 
 	fd = open_config_file(config, name);
 	if (fd == -1) {
@@ -448,6 +460,66 @@ weston_config_parse(const char *name)
 
 	return config;
 }
+
+/* Parses a string of the form section.key=value,section.key=value
+ * and updates the provided config.
+ */
+bool
+weston_config_update(struct weston_config *config, char *line)
+{
+	char *p;
+	char *tok;
+	char *saveptr;
+	char *section_name;
+	char *key;
+	char *value;
+	struct weston_config_section *section = NULL;
+
+	tok = strtok_r(line, ",", &saveptr);
+	while (tok != NULL) {
+		p = strchr(tok, '.');
+		if (p == NULL)
+			return false;
+		p[0] = '\0';
+		section_name = strdup(tok);
+		tok = p+1;
+
+		p = strchr(tok, '=');
+		if (p == NULL) {
+			free(section_name);
+			return false;
+		}
+		p[0] = '\0';
+		key = strdup(tok);
+		value = p+1;
+
+		section = weston_config_get_section(config, section_name, NULL, NULL);
+		if (section == NULL) {
+			section = config_add_section(config, section_name);
+			if (section == NULL) {
+				fprintf(stderr, "could not add section %s\n", section_name);
+				free(section_name);
+				free(key);
+				return false;
+			}
+		}
+		if (!weston_config_section_set(section, key, value)) {
+			fprintf(stderr, "could not set %s to %s in section %s\n",
+				key, value, section_name);
+			free(section_name);
+			free(key);
+			return false;
+		}
+
+		free(section_name);
+		free(key);
+
+		tok = strtok_r(NULL, ",", &saveptr);
+	}
+
+	return true;
+}
+
 
 const char *
 weston_config_get_full_path(struct weston_config *config)
