@@ -1077,6 +1077,7 @@ hmi_homescreen_setting_create(void)
 	struct weston_config_section *shellSection = NULL;
 	struct hmi_homescreen_setting *setting = MEM_ALLOC(sizeof(*setting));
 	struct weston_config_section *section = NULL;
+	const char *config_path = NULL;
 	const char *name = NULL;
 	uint32_t workspace_layer_id;
 	uint32_t icon_surface_id = 0;
@@ -1084,7 +1085,16 @@ hmi_homescreen_setting_create(void)
 	wl_list_init(&setting->workspace_list);
 	wl_list_init(&setting->launcher_list);
 
-	config = weston_config_parse("weston.ini");
+	config_path = getenv("WESTON_CONFIG_FILE");
+	if (config_path == NULL) {
+		config = weston_config_parse("weston.ini");
+	} else {
+		config = weston_config_parse(config_path);
+		if (config == NULL) {
+			fprintf(stderr, "failed to load config from %s\n", config_path);
+			exit(1);
+		}
+	}
 
 	shellSection =
 		weston_config_get_section(config, "ivi-shell", NULL, NULL);

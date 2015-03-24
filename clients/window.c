@@ -1292,10 +1292,20 @@ create_cursors(struct display *display)
 	struct weston_config_section *s;
 	int size;
 	char *theme = NULL;
+	char *config_path = NULL;
 	unsigned int i, j;
 	struct wl_cursor *cursor;
 
-	config = weston_config_parse("weston.ini");
+	config_path = getenv("WESTON_CONFIG_FILE");
+	if (config_path == NULL) {
+		config = weston_config_parse("weston.ini");
+	} else {
+		config = weston_config_parse(config_path);
+		if (config == NULL) {
+			fprintf(stderr, "could not load config from %s\n", config_path);
+			return;
+		}
+	}
 	s = weston_config_get_section(config, "shell", NULL, NULL);
 	weston_config_section_get_string(s, "cursor-theme", &theme, NULL);
 	weston_config_section_get_int(s, "cursor-size", &size, 32);

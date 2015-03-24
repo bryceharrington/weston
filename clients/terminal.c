@@ -3052,6 +3052,7 @@ int main(int argc, char *argv[])
 	struct terminal *terminal;
 	struct weston_config *config;
 	struct weston_config_section *s;
+	char *config_path = NULL;
 
 	/* as wcwidth is locale-dependent,
 	   wcwidth needs setlocale call to function properly. */
@@ -3061,7 +3062,16 @@ int main(int argc, char *argv[])
 	if (!option_shell)
 		option_shell = "/bin/bash";
 
-	config = weston_config_parse("weston.ini");
+	config_path = getenv("WESTON_CONFIG_FILE");
+	if (config_path == NULL) {
+		config = weston_config_parse("weston.ini");
+	} else {
+		config = weston_config_parse("weston.ini");
+		if (config == NULL) {
+			fprintf("failed to load config from %s\n", config_path);
+			return -1;
+		}
+	}
 	s = weston_config_get_section(config, "terminal", NULL, NULL);
 	weston_config_section_get_string(s, "font", &option_font, "mono");
 	weston_config_section_get_int(s, "font-size", &option_font_size, 14);

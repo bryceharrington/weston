@@ -1328,11 +1328,21 @@ int main(int argc, char *argv[])
 	struct desktop desktop = { 0 };
 	struct output *output;
 	struct weston_config_section *s;
+	char *config_path = NULL;
 
 	desktop.unlock_task.run = unlock_dialog_finish;
 	wl_list_init(&desktop.outputs);
 
-	desktop.config = weston_config_parse("weston.ini");
+	config_path = getenv("WESTON_CONFIG_FILE");
+	if (config_path == NULL) {
+		desktop.config = weston_config_parse("weston.ini");
+	} else {
+		desktop.config = weston_config_parse(config_path);
+		if (desktop.config == NULL) {
+			fprintf(stderr, "failed to load config from %s\n", config_path);
+			return -1;
+		}
+	}
 	s = weston_config_get_section(desktop.config, "shell", NULL, NULL);
 	weston_config_section_get_bool(s, "locking", &desktop.locking, 1);
 
