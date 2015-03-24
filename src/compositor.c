@@ -5031,6 +5031,7 @@ usage(int error_code)
 		"  --modules\t\tLoad the comma-separated list of modules\n"
 		"  --log=FILE\t\tLog to the given file\n"
 		"  --no-config\t\tDo not read weston.ini\n"
+		"  --config=FILE\t\tPath and/or filename to use for configuration\n"
 		"  -h, --help\t\tThis help message\n\n");
 
 #if defined(BUILD_DRM_COMPOSITOR)
@@ -5234,6 +5235,7 @@ int main(int argc, char *argv[])
 	char *socket_name = NULL;
 	int32_t version = 0;
 	int32_t noconfig = 0;
+	char *config_path = NULL;
 	int32_t numlock_on;
 	struct weston_config *config = NULL;
 	struct weston_config_section *section;
@@ -5251,6 +5253,7 @@ int main(int argc, char *argv[])
 		{ WESTON_OPTION_BOOLEAN, "help", 'h', &help },
 		{ WESTON_OPTION_BOOLEAN, "version", 0, &version },
 		{ WESTON_OPTION_BOOLEAN, "no-config", 0, &noconfig },
+		{ WESTON_OPTION_STRING, "config", 'C', *config_path },
 	};
 
 	parse_options(core_options, ARRAY_LENGTH(core_options), &argc, argv);
@@ -5293,10 +5296,16 @@ int main(int argc, char *argv[])
 		goto out_signals;
 
 	if (noconfig == 0)
-		config = weston_config_parse("weston.ini");
+		if (config_path == NULL)
+			config = weston_config_parse("weston.ini");
+		else
+			config = weston_config_parse(config_path);
 	if (config != NULL) {
 		weston_log("Using config file '%s'\n",
 			   weston_config_get_full_path(config));
+	} else if (config_path != NULL) {
+		weston_log("fatal: could not load config at '%s'\n", config_path);
+		goto out_signals;
 	} else {
 		weston_log("Starting with no config file.\n");
 	}

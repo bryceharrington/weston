@@ -143,6 +143,16 @@ Do not read
 for the compositor. Avoids e.g. loading compositor modules via the
 configuration file, which is useful for unit tests.
 .TP
+BR \-\-config
+Specifies the configuration file to load, instead of
+.I weston.ini
+at the default location.  This can be a relative or absolute path, a
+filename, or a path and a filename.  If only a path is given, a
+.I weston.ini
+file will be looked for.  If only a filename is given, it will be looked
+for in the directory the default weston.ini is normally found.  Whatever
+the case, if the file is missing or cannot be read, weston will
+terminate with an error.
 \fB\-\^S\fR\fIname\fR, \fB\-\-socket\fR=\fIname\fR
 Weston will listen in the Wayland socket called
 .IR name .
