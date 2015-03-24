@@ -391,6 +391,9 @@ weston_config_parse(const char *name)
 
 	fclose(fp);
 
+	// Share the name of our loaded config file with child processes
+	setenv("WESTON_CONFIG_FILE", config->path, 1);
+
 	return config;
 }
 
